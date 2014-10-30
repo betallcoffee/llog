@@ -13,6 +13,7 @@ type LogType int8
 var logger *log.Logger
 var filelog *log.Logger
 var minLevel LogLevel
+var fileTag string
 
 const (
 	TRACE LogLevel = iota
@@ -27,6 +28,10 @@ const (
 const (
 	CONSOLE LogType = iota + 1
 	FILE
+)
+
+const (
+	CALLDEPTH = 2
 )
 
 // Call Initialize after setting (or not setting) SyslogHost and SyslogPort when
@@ -44,6 +49,10 @@ func GetLogLevel() LogLevel {
 	return minLevel
 }
 
+func SetFileTag(filetag string) {
+	fileTag = filetag
+}
+
 func ResetLogger() {
 	logger = nil
 	filelog = nil
@@ -53,7 +62,7 @@ func AddLogger(logtype LogType) {
 	if logtype == CONSOLE {
 		logger = log.New(os.Stdout, "\r\n", log.Ldate|log.Ltime|log.Lshortfile)
 	} else if logtype == FILE {
-		filename := fmt.Sprintf("./%s.llog", time.Now().String())
+		filename := fmt.Sprintf("./%s%s.llog",fileTag, time.Now().String())
 		fmt.Printf("Log initialize:%s\n", filename)
 		logfile, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0600)
 		if err != nil {
@@ -71,145 +80,145 @@ func DelLogger(logtype LogType) {
 	}
 }
 
-func _log(s string) {
+func _log(calldepth int, s string) {
 	if logger != nil {
-		logger.Output(4, s)
+		logger.Output(calldepth + 1, s)
 	}
 	if filelog != nil {
-		filelog.Output(4, s)
+		filelog.Output(calldepth + 1, s)
 	}
 }
 
 func Panic(messages ...interface{}) {
-	panic_(messages...)
+	_panic(CALLDEPTH, messages...)
 }
 
 func Panicf(format string, messages ...interface{}) {
-	panicf(format, messages...)
+	panicf(CALLDEPTH, format, messages...)
 }
 
 func Fatal(messages ...interface{}) {
 	if minLevel <= FATAL {
-		fatal(messages...)
+		fatalln(CALLDEPTH, messages...)
 	}
 }
 
 func Fatalf(format string, messages ...interface{}) {
 	if minLevel <= FATAL {
-		fatalf(format, messages...)
+		fatalf(CALLDEPTH, format, messages...)
 	}
 }
 
 func Error(messages ...interface{}) {
 	if minLevel <= ERROR {
-		print(messages...)
+		println(CALLDEPTH, messages...)
 	}
 }
 
 func Errorf(format string, messages ...interface{}) {
 	if minLevel <= ERROR {
-		printf(format, messages...)
+		printf(CALLDEPTH, format, messages...)
 	}
 }
 
 func Warn(messages ...interface{}) {
 	if minLevel <= WARN {
-		print(messages...)
+		println(CALLDEPTH, messages...)
 	}
 }
 
 func Warnf(format string, messages ...interface{}) {
 	if minLevel <= WARN {
-		printf(format, messages...)
+		printf(CALLDEPTH, format, messages...)
 	}
 }
 
 func Info(messages ...interface{}) {
 	if minLevel <= INFO {
-		print(messages...)
+		println(CALLDEPTH, messages...)
 	}
 }
 
 func Infof(format string, messages ...interface{}) {
 	if minLevel <= INFO {
-		printf(format, messages...)
+		printf(CALLDEPTH, format, messages...)
 	}
 }
 
 func Debug(messages ...interface{}) {
 	if minLevel <= DEBUG {
-		print(messages...)
+		println(CALLDEPTH, messages...)
 	}
 }
 
 func Debugf(format string, messages ...interface{}) {
 	if minLevel <= DEBUG {
-		printf(format, messages...)
+		printf(CALLDEPTH, format, messages...)
 	}
 }
 
 func Trace(messages ...interface{}) {
 	if minLevel <= TRACE {
-		print(messages...)
+		println(CALLDEPTH, messages...)
 	}
 }
 
 func Tracef(format string, messages ...interface{}) {
 	if minLevel <= TRACE {
-		printf(format, messages...)
+		printf(CALLDEPTH, format, messages...)
 	}
 }
 
 // Printf calls l.Output to print to the logger.
 // Arguments are handled in the manner of fmt.Printf.
-func printf(format string, v ...interface{}) {
-	_log(fmt.Sprintf(format, v...))
+func printf(calldepth int,format string, v ...interface{}) {
+	_log(calldepth + 1, fmt.Sprintf(format, v...))
 }
 
 // Print calls l.Output to print to the logger.
 // Arguments are handled in the manner of fmt.Print.
-func print(v ...interface{}) { _log(fmt.Sprint(v...)) }
+func print(calldepth int, v ...interface{}) { _log(calldepth + 1,fmt.Sprint(v...)) }
 
 // Println calls l.Output to print to the logger.
 // Arguments are handled in the manner of fmt.Println.
-func println(v ...interface{}) { _log(fmt.Sprintln(v...)) }
+func println(calldepth int, v ...interface{}) { _log(calldepth + 1, fmt.Sprintln(v...)) }
 
 // Fatal is equivalent to l.Print() followed by a call to os.Exit(1).
-func fatal(v ...interface{}) {
-	_log(fmt.Sprint(v...))
+func fatal(calldepth int, v ...interface{}) {
+	_log(calldepth + 1, fmt.Sprint(v...))
 	os.Exit(1)
 }
 
 // Fatalf is equivalent to l.Printf() followed by a call to os.Exit(1).
-func fatalf(format string, v ...interface{}) {
-	_log(fmt.Sprintf(format, v...))
+func fatalf(calldepth int, format string, v ...interface{}) {
+	_log(calldepth + 1, fmt.Sprintf(format, v...))
 	os.Exit(1)
 }
 
 // Fatalln is equivalent to l.Println() followed by a call to os.Exit(1).
-func fatalln(v ...interface{}) {
-	_log(fmt.Sprintln(v...))
+func fatalln(calldepth int, v ...interface{}) {
+	_log(calldepth + 1, fmt.Sprintln(v...))
 	os.Exit(1)
 }
 
 // Panic is equivalent to l.Print() followed by a call to panic().
-func panic_(v ...interface{}) {
+func _panic(calldepth int, v ...interface{}) {
 	s := fmt.Sprint(v...)
-	_log(s)
+	_log(calldepth + 1, s)
 	panic(s)
 }
 
 // Panicf is equivalent to l.Printf() followed by a call to panic().
-func panicf(format string, v ...interface{}) {
+func panicf(calldepth int, format string, v ...interface{}) {
 	s := fmt.Sprintf(format, v...)
-	_log(s)
+	_log(calldepth + 1, s)
 	panic(s)
 }
 
 // Panicln is equivalent to l.Println() followed by a call to panic().
-func panicln(v ...interface{}) {
+func panicln(calldepth int, v ...interface{}) {
 	s := fmt.Sprintln(v...)
-	_log(s)
+	_log(calldepth + 1, s)
 	panic(s)
 }
 
